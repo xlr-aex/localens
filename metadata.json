@@ -1,0 +1,5 @@
+{
+  "name": "LocaLens",
+  "description": "An AI-powered Geospatial Intelligence (GEOSINT) tool that analyzes an image to determine the geographical location where it was taken.",
+  "requestFramePermissions": []
+}
