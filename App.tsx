@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { analyzeImageForLocation } from './services/geminiService';
 import ImageUploader from './components/ImageUploader';
@@ -12,6 +11,7 @@ const App: React.FC = () => {
   const [analysis, setAnalysis] = useState<AnalysisResultType | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [apiKey, setApiKey] = useState<string>("");
 
   const resetState = () => {
     setImageFile(null);
@@ -34,13 +34,17 @@ const App: React.FC = () => {
       setError("Please select an image first.");
       return;
     }
+    if (!apiKey.trim()) {
+      setError("Please enter your Gemini API Key.");
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
     setAnalysis(null);
 
     try {
-      const result = await analyzeImageForLocation(imageFile);
+      const result = await analyzeImageForLocation(imageFile, apiKey);
       setAnalysis(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred.");
@@ -84,7 +88,25 @@ const App: React.FC = () => {
 
             <div className="bg-gray-800 p-6 rounded-lg shadow-2xl space-y-4">
                <h2 className="text-xl font-semibold text-white">2. Run Analysis</h2>
-               <div className="h-64 flex flex-col justify-center items-center">
+               
+               {/* API Key Input */}
+               <div className="space-y-2">
+                  <label htmlFor="apiKey" className="block text-sm font-medium text-gray-400">Gemini API Key</label>
+                  <input 
+                    type="password" 
+                    id="apiKey" 
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder="AIzaSy..."
+                    className="w-full bg-gray-900 border border-gray-700 text-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-600 text-sm"
+                    disabled={isLoading}
+                  />
+                  <p className="text-xs text-gray-500">
+                    Your key is used locally and never stored. Get one at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">Google AI Studio</a>.
+                  </p>
+               </div>
+
+               <div className="h-48 flex flex-col justify-center items-center border-t border-gray-700 pt-4 mt-4">
                  {isLoading ? (
                     <Loader />
                  ) : (
@@ -92,12 +114,12 @@ const App: React.FC = () => {
                       <button
                         onClick={handleAnalyzeClick}
                         disabled={!imageFile || isLoading}
-                        className="px-8 py-4 text-lg font-bold text-white bg-blue-600 rounded-lg shadow-lg hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-300 disabled:transform-none"
+                        className="w-full px-8 py-4 text-lg font-bold text-white bg-blue-600 rounded-lg shadow-lg hover:bg-blue-700 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed transform hover:scale-[1.02] transition-all duration-300 disabled:transform-none disabled:shadow-none"
                       >
                         Find Location
                       </button>
                       <p className="mt-4 text-sm text-gray-400 text-center">
-                        {imageFile ? "Ready to analyze." : "Upload an image to begin."}
+                        {!imageFile ? "Upload an image to begin." : "Ready to analyze."}
                       </p>
                     </>
                  )}
@@ -109,7 +131,7 @@ const App: React.FC = () => {
              <div className="mt-8 bg-gray-800 p-6 rounded-lg shadow-2xl">
                 <h2 className="text-xl font-semibold text-white mb-4">3. Results</h2>
                  {error && (
-                    <div className="bg-red-900/50 border border-red-700 text-red-300 p-4 rounded-lg">
+                    <div className="bg-red-900/50 border border-red-700 text-red-300 p-4 rounded-lg animate-fade-in">
                       <p className="font-bold">Analysis Failed</p>
                       <p>{error}</p>
                     </div>

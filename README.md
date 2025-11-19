@@ -2,16 +2,16 @@
 
 > **AI-Powered Geospatial Intelligence (GEOSINT)**
 
-**LocaLens** leverages **Google Gemini 2.5** to pinpoint image locations with forensic precision. It employs the unique "Host & Anchor" protocol to verify architectural fingerprints against satellite data, simulating expert Geoguessr reasoning to avoid common AI hallucinations.
+**LocaLens** leverages **Google Gemini 2.5** to pinpoint image locations with forensic precision. It employs the unique "Host & Anchor" protocol to verify architectural fingerprints against satellite data.
 
 ---
 
 ## ✨ Key Features
 
-*   **🧠 Multi-Hypothesis Reasoning**: Generates top 3 probable locations with confidence scores and detailed deduction trails.
-*   **🛡️ "Host & Anchor" Protocol**: A strict verification system that cross-references specific buildings against their neighbors to prevent "franchise traps" (e.g., guessing a generic Starbucks).
-*   **🔍 Visual Evidence Scanning**: Identifies specific road markings, vegetation types, and urban furniture (bollards, plates).
-*   **🗺️ Dual-View Verification**: Displays results on OpenStreetMap alongside an interactive Google Street View window for instant confirmation.
+*   **🧠 Multi-Hypothesis Reasoning**: Generates top 3 probable locations with confidence scores.
+*   **🛡️ "Host & Anchor" Protocol**: A strict verification system to avoid common AI hallucinations.
+*   **🔍 Visual Evidence Scanning**: Identifies specific road markings, vegetation types, and urban furniture.
+*   **🗺️ Open Source Maps**: Visualizes results on OpenStreetMap (no paid API required).
 
 ## 🛠️ Tech Stack
 
@@ -29,13 +29,15 @@
     npm install
     ```
 
-2.  **Configure Environment**
-    Ensure your `API_KEY` (Google Gemini) is set in your environment variables.
-
-3.  **Run Locally**
+2.  **Run Locally**
     ```bash
     npm run dev
     ```
+
+3.  **Enter API Key**
+    Open the app in your browser. You will be asked to enter your **Gemini API Key** in the interface before running an analysis.
+    
+    *Get a key here: [Google AI Studio](https://aistudio.google.com/app/apikey)*
 
 ## 📄 License
 

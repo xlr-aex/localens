@@ -2,12 +2,6 @@ import { GoogleGenAI } from "@google/genai";
 import { fileToBase64 } from '../utils/fileUtils';
 import type { AnalysisResult } from '../types';
 
-if (!process.env.API_KEY) {
-  throw new Error("API_KEY environment variable is not set");
-}
-
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 // Helper to clean markdown code blocks from JSON response
 const cleanJson = (text: string): string => {
   let cleanText = text.trim();
@@ -17,7 +11,13 @@ const cleanJson = (text: string): string => {
   return cleanText;
 };
 
-export const analyzeImageForLocation = async (imageFile: File): Promise<AnalysisResult> => {
+export const analyzeImageForLocation = async (imageFile: File, apiKey: string): Promise<AnalysisResult> => {
+  if (!apiKey) {
+    throw new Error("API Key is missing. Please enter your Gemini API Key in the interface.");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
+
   try {
     const base64Image = await fileToBase64(imageFile);
     

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import type { AnalysisResult as AnalysisResultType, LocationGuess } from '../types';
 import { MapPinIcon } from './icons/MapPinIcon';
@@ -22,7 +21,7 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data }) => {
   }, [guesses]);
 
   const { latitude, longitude } = selectedGuess;
-  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${longitude - 0.005},${latitude - 0.005},${longitude + 0.005},${latitude + 0.005}&layer=mapnik&marker=${latitude},${longitude}`;
+  const osmUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${longitude - 0.005},${latitude - 0.005},${longitude + 0.005},${latitude + 0.005}&layer=mapnik&marker=${latitude},${longitude}`;
 
   return (
     <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-lg p-6 w-full animate-fade-in space-y-8">
@@ -87,17 +86,30 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data }) => {
              </div>
           </div>
           
-          {/* Map */}
-          <div className="rounded-lg overflow-hidden border-2 border-gray-700 shadow-lg relative h-[350px] mb-6">
-            <iframe
-                width="100%"
-                height="100%"
-                frameBorder="0"
-                scrolling="no"
-                src={mapUrl}
-                title="Location Map"
-                className="absolute inset-0 w-full h-full"
-            ></iframe>
+          {/* Maps Grid (OSM Only) */}
+          <div className="mb-6">
+            <div className="rounded-lg overflow-hidden border-2 border-gray-700 shadow-lg relative h-[400px] w-full">
+                <iframe
+                    width="100%"
+                    height="100%"
+                    frameBorder="0"
+                    scrolling="no"
+                    src={osmUrl}
+                    title="Location Map"
+                    className="absolute inset-0 w-full h-full"
+                ></iframe>
+                <div className="absolute top-0 left-0 bg-gray-900/80 px-2 py-1 text-xs text-white rounded-br">OpenStreetMap</div>
+            </div>
+            <div className="mt-2 flex justify-end">
+                <a 
+                    href={`https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-blue-400 hover:text-blue-300 hover:underline flex items-center"
+                >
+                    Open in Google Maps (External) &rarr;
+                </a>
+            </div>
           </div>
 
           {/* Guess Specific Reasoning */}
