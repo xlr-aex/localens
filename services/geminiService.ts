@@ -11,24 +11,41 @@ const cleanJson = (text: string): string => {
   return cleanText;
 };
 
+// Define fallback models in order of preference
+const MODEL_ATTEMPTS = [
+  { 
+    model: 'gemini-2.5-flash', 
+    thinkingBudget: 24576, // High reasoning
+    desc: 'High Reasoning (Flash 2.5)' 
+  },
+  { 
+    model: 'gemini-2.5-flash-lite-latest', 
+    thinkingBudget: 16000, // Lighter, often faster
+    desc: 'Fast Reasoning (Flash Lite)' 
+  },
+  { 
+    model: 'gemini-2.0-flash', 
+    thinkingBudget: 0, // Legacy/Stable fallback without thinking
+    desc: 'Standard (Flash 2.0)' 
+  }
+];
+
 export const analyzeImageForLocation = async (imageFile: File, apiKey: string): Promise<AnalysisResult> => {
   if (!apiKey) {
     throw new Error("API Key is missing. Please enter your Gemini API Key in the interface.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
+  
+  const base64Image = await fileToBase64(imageFile);
+  const imagePart = {
+    inlineData: {
+      mimeType: imageFile.type,
+      data: base64Image,
+    },
+  };
 
-  try {
-    const base64Image = await fileToBase64(imageFile);
-    
-    const imagePart = {
-      inlineData: {
-        mimeType: imageFile.type,
-        data: base64Image,
-      },
-    };
-
-    const systemPrompt = `
+  const systemPrompt = `
 You are LocaLens, an elite Forensic Geolocation Analyst and Grandmaster Geoguessr Player.
 Your goal is to determine the exact camera coordinates by cross-referencing visual artifacts with a simulated geospatial database.
 
@@ -97,68 +114,82 @@ To verify a location, you must identify two distinct entities:
 }
 `;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: {
-        parts: [
-            { text: systemPrompt }, 
-            imagePart
-        ]
-      },
-      config: {
-        // Maximize reasoning capability
-        thinkingConfig: { thinkingBudget: 24576 },
-        tools: [{ googleSearch: {} }], 
-      },
-    });
+  let lastError: any;
+
+  // Loop through models to handle overloading/errors
+  for (const attempt of MODEL_ATTEMPTS) {
+    console.log(`Attempting analysis with model: ${attempt.model} (${attempt.desc})...`);
     
-    const text = response.text || "";
-    const cleanedJson = cleanJson(text);
-    
-    let parsedResult: AnalysisResult;
     try {
-        parsedResult = JSON.parse(cleanedJson) as AnalysisResult;
-    } catch (e) {
-        console.error("JSON Parse Error", e);
-        console.error("Raw Text:", text);
-        // Attempt to extract JSON if buried in text
-        const match = text.match(/\{[\s\S]*\}/);
-        if (match) {
-            try {
-                parsedResult = JSON.parse(match[0]) as AnalysisResult;
-            } catch (e2) {
-                throw new Error("Failed to parse analysis results. AI response was not valid JSON.");
-            }
-        } else {
-             throw new Error("Failed to parse analysis results. AI response was not valid JSON.");
-        }
-    }
+      // Prepare config
+      const config: any = {
+        tools: [{ googleSearch: {} }],
+      };
 
-    // Extract Grounding Metadata (Sources)
-    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
-    const sources: { title: string; uri: string }[] = [];
+      // Only add thinking config if budget > 0 (Not all models support it)
+      if (attempt.thinkingBudget > 0) {
+        config.thinkingConfig = { thinkingBudget: attempt.thinkingBudget };
+      }
 
-    if (groundingChunks) {
-      groundingChunks.forEach(chunk => {
-        if (chunk.web) {
-          sources.push({
-            title: chunk.web.title || "Verification Source",
-            uri: chunk.web.uri || "#"
-          });
-        }
+      const response = await ai.models.generateContent({
+        model: attempt.model,
+        contents: {
+          parts: [
+              { text: systemPrompt }, 
+              imagePart
+          ]
+        },
+        config: config,
       });
+      
+      const text = response.text || "";
+      const cleanedJson = cleanJson(text);
+      
+      let parsedResult: AnalysisResult;
+      try {
+          parsedResult = JSON.parse(cleanedJson) as AnalysisResult;
+      } catch (e) {
+          // If JSON parse fails, try regex extraction
+          const match = text.match(/\{[\s\S]*\}/);
+          if (match) {
+              parsedResult = JSON.parse(match[0]) as AnalysisResult;
+          } else {
+              throw new Error("Invalid JSON response");
+          }
+      }
+
+      // Extract Grounding Metadata (Sources)
+      const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+      const sources: { title: string; uri: string }[] = [];
+
+      if (groundingChunks) {
+        groundingChunks.forEach(chunk => {
+          if (chunk.web) {
+            sources.push({
+              title: chunk.web.title || "Verification Source",
+              uri: chunk.web.uri || "#"
+            });
+          }
+        });
+      }
+
+      const uniqueSources = sources.filter((v, i, a) => a.findIndex(t => (t.uri === v.uri)) === i);
+      parsedResult.sources = uniqueSources;
+
+      // If we got here, success! Return the result.
+      return parsedResult;
+
+    } catch (error) {
+      console.warn(`Model ${attempt.model} failed:`, error);
+      lastError = error;
+      // Continue to next model in loop
     }
-
-    const uniqueSources = sources.filter((v, i, a) => a.findIndex(t => (t.uri === v.uri)) === i);
-    parsedResult.sources = uniqueSources;
-
-    return parsedResult;
-
-  } catch (error) {
-    console.error("Error analyzing image with Gemini API:", error);
-    if (error instanceof Error) {
-        throw new Error(`Failed to analyze image: ${error.message}`);
-    }
-    throw new Error("An unknown error occurred during image analysis.");
   }
+
+  // If all attempts fail
+  console.error("All model attempts failed.", lastError);
+  if (lastError instanceof Error) {
+      throw new Error(`Failed to analyze image after multiple attempts. Last error: ${lastError.message}`);
+  }
+  throw new Error("All AI models are currently overloaded or unavailable. Please try again later.");
 };
