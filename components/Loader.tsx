@@ -12,14 +12,16 @@ const Loader: React.FC = () => {
       "Comparing Street View: Host vs Anchor Match...",
       "Rejecting Locations with Mismatched Neighbors...",
       "Verifying Street Furniture (Bollards/Trees)...",
-      "Pinpointing Exact Address Coordinates..."
+      "Pinpointing Exact Address Coordinates...",
+      "Optimizing connection... (Retrying if overloaded)",
+      "Switching to Backup Model for Final Confirmation..."
     ];
     
     let i = 0;
     const interval = setInterval(() => {
       i = (i + 1) % messages.length;
       setMessage(messages[i]);
-    }, 3000); // Change message every 3s
+    }, 3500); // Change message every 3.5s
 
     return () => clearInterval(interval);
   }, []);
@@ -34,7 +36,7 @@ const Loader: React.FC = () => {
         </div>
         <div className="space-y-2 animate-pulse">
             <p className="text-lg font-semibold text-blue-300">{message}</p>
-            <p className="text-xs text-gray-500 font-mono">Logic Budget: MAX (24k tokens)</p>
+            <p className="text-xs text-gray-500 font-mono">Logic Budget: Dynamic (Auto-Scaling)</p>
         </div>
     </div>
   );

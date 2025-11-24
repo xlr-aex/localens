@@ -11,22 +11,30 @@ const cleanJson = (text: string): string => {
   return cleanText;
 };
 
+// Helper for delay to handle rate limits
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 // Define fallback models in order of preference
 const MODEL_ATTEMPTS = [
   { 
     model: 'gemini-2.5-flash', 
-    thinkingBudget: 24576, // High reasoning
+    thinkingBudget: 16000, // Reduced slightly to respect quotas
     desc: 'High Reasoning (Flash 2.5)' 
   },
   { 
-    model: 'gemini-2.5-flash-lite-latest', 
-    thinkingBudget: 16000, // Lighter, often faster
+    model: 'gemini-flash-lite-latest', 
+    thinkingBudget: 12000, // Lighter, faster
     desc: 'Fast Reasoning (Flash Lite)' 
   },
   { 
+    model: 'gemini-2.5-flash', 
+    thinkingBudget: 0, // Fallback: Standard logic without "Thinking" (Very Stable)
+    desc: 'Standard (Flash 2.5 - No Thinking)' 
+  },
+  { 
     model: 'gemini-2.0-flash', 
-    thinkingBudget: 0, // Legacy/Stable fallback without thinking
-    desc: 'Standard (Flash 2.0)' 
+    thinkingBudget: 0, // Legacy/Stable fallback
+    desc: 'Legacy (Flash 2.0)' 
   }
 ];
 
@@ -179,17 +187,32 @@ To verify a location, you must identify two distinct entities:
       // If we got here, success! Return the result.
       return parsedResult;
 
-    } catch (error) {
+    } catch (error: any) {
       console.warn(`Model ${attempt.model} failed:`, error);
       lastError = error;
-      // Continue to next model in loop
+      
+      // If error is 429 (Resource Exhausted), we MUST wait longer.
+      if (error?.status === 429 || error?.message?.includes('429')) {
+         console.log("Quota limit hit (429). Waiting 4 seconds before retry...");
+         await delay(4000); 
+      } else {
+         // Standard backoff for other errors
+         await delay(1000);
+      }
     }
   }
 
   // If all attempts fail
   console.error("All model attempts failed.", lastError);
-  if (lastError instanceof Error) {
-      throw new Error(`Failed to analyze image after multiple attempts. Last error: ${lastError.message}`);
+  let errorMessage = "All AI models are currently overloaded. Please try again later.";
+  
+  if (lastError) {
+      if (lastError.message?.includes('429')) {
+          errorMessage = "Quota exceeded (429). Please check your Google AI Studio quota or try again in a minute.";
+      } else if (lastError.message) {
+          errorMessage = `Analysis failed: ${lastError.message}`;
+      }
   }
-  throw new Error("All AI models are currently overloaded or unavailable. Please try again later.");
+  
+  throw new Error(errorMessage);
 };
